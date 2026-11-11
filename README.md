@@ -86,3 +86,7 @@ Regenerate the standalone USB panel from the repo root with `python3 tools/build
 The optional Rust desktop simulator shares the engine and protocol implementation. Run `cargo run --release -- --help` for its CLI. `cargo run --release -- listen --port 4000 --seconds 10` on a computer joined to the board's Wi-Fi acts as a receiver and decodes the stream. Desktop recording and replay use the iFly ADS-B recording container. Replay emits supported, checksum-valid standard messages. The ESP32 keeps a bounded live log in RAM.
 
 Shared code lives in `src/`, firmware in `esp32/`, browser controls in `ui/`, and the USB launcher and panel builder in `tools/`. The GDL 90 framing and FIS-B tests include the published Garmin data-interface examples. [espup installation](https://github.com/esp-rs/espup) · [espflash](https://github.com/esp-rs/espflash)
+
+## License
+
+This project is distributed under the [MIT License](LICENSE).

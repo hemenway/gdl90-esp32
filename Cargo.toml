@@ -2,6 +2,7 @@
 name = "gdl90-emulator"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 description = "GDL 90 ADS-B receiver emulator: drives an EFB over Wi-Fi as if it were flying"
 publish = false
 

@@ -2,6 +2,7 @@
 name = "gdl90-esp32"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 resolver = "2"
 rust-version = "1.88"
 description = "GDL 90 emulator firmware: ESP32 Wi-Fi access point + browser control panel"
