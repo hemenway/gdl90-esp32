@@ -1,0 +1,13 @@
+.DS_Store
+/target/
+/esp32/target/
+/esp32/.embuild/
+/esp32/sdkconfig
+/esp32/sdkconfig.old
+/.venv/
+__pycache__/
+*.pyc
+/recordings/
+/gdl90-emu.json
+/dist/
+/setups/

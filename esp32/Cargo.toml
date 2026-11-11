@@ -1,0 +1,31 @@
+[package]
+name = "gdl90-esp32"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+rust-version = "1.88"
+description = "GDL 90 emulator firmware: ESP32 Wi-Fi access point + browser control panel"
+publish = false
+
+[[bin]]
+name = "gdl90-esp32"
+harness = false
+
+[profile.release]
+opt-level = "s"
+debug = true
+
+[profile.dev]
+debug = true
+opt-level = "z"
+
+[dependencies]
+log = "0.4"
+anyhow = "1"
+esp-idf-svc = "0.51"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rand = { version = "0.8", features = ["small_rng"] }
+
+[build-dependencies]
+embuild = "0.33"

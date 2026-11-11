@@ -1,0 +1,6 @@
+# 4 MB flash: one big app slot (Rust std + Wi-Fi + HTTP + engine is ~1.5-2 MB) and a larger
+# NVS so saved emulator settings fit next to Wi-Fi calibration data.
+# Name,   Type, SubType, Offset,   Size
+nvs,      data, nvs,     0x9000,   0x15000
+phy_init, data, phy,     0x1E000,  0x1000
+factory,  app,  factory, 0x20000,  0x3E0000

@@ -1,0 +1,1121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GDL 90 Emulator</title>
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:,">
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0b1418;
+  --panel: #132027;
+  --panel2: #192a32;
+  --line: #31424a;
+  --text: #e6eeed;
+  --muted: #afbec0;
+  --accent: #78d9bb;
+  --ok: #78d9bb;
+  --warn: #f6bd77;
+  --bad: #ff9a8c;
+  --own: #ffd85c;
+  font: 14px "Segoe UI", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button, input, select, textarea { background: #0e1b21; border: 1px solid var(--line); border-radius: 5px; }
+button { min-height: 34px; background: var(--panel2); padding: 5px 11px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary, button.on { color: #091c18; background: var(--accent); border-color: var(--accent); }
+button.danger { color: var(--bad); }
+button.small { font-size: 12px; min-height: 30px; padding: 3px 9px; }
+button:disabled, input:disabled, select:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input, select, textarea { min-height: 32px; min-width: 0; padding: 4px 7px; max-width: 100%; }
+textarea { width: 100%; resize: vertical; font-family: ui-monospace, monospace; font-size: 12px; }
+input[type=checkbox] { accent-color: var(--accent); min-height: 0; width: 16px; height: 16px; }
+input[type=number] { width: 96px; }
+header { display: flex; align-items: center; gap: 24px; min-height: 76px; padding: 12px 22px; border-bottom: 1px solid var(--line); background: #152229; }
+.brand, .header-actions { display: flex; gap: 12px; align-items: center; }
+.brand h1 { font-size: 18px; line-height: 1.2; margin: 0; letter-spacing: -.04em; }
+.brand p { font-size: 12px; color: var(--warn); margin: 3px 0 0; }
+.logo { width: 37px; height: 37px; border: 1px solid var(--accent); border-radius: 50%; display: block; position: relative; background: repeating-radial-gradient(circle, transparent 0 6px, #4a796b 6px 7px, transparent 7px 10px); }
+.logo::before { content: ''; position: absolute; width: 16px; height: 1px; background: var(--accent); left: 50%; top: 50%; transform-origin: left; transform: rotate(-53deg); }
+.logo::after { content: ''; position: absolute; left: 29%; top: 39%; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+#linkState { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
+#linkState::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--warn); }
+#linkState.connected::before { background: var(--ok); }
+#linkState.lost { color: var(--bad); }
+#linkState.lost::before { background: var(--bad); }
+.header-actions { margin-left: auto; gap: 8px; min-width: 0; }
+.header-actions label { color: var(--muted); font-size: 12px; }
+#profileSel { max-width: 220px; }
+main { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(425px, 41%); height: calc(100vh - 76px); height: calc(100dvh - 76px); min-height: 510px; }
+.scope-panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.scope-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 16px 22px; border-bottom: 1px solid var(--line); }
+h2 { margin: 0; font-size: 17px; font-weight: 600; }
+#pScenario { color: var(--muted); font: 12px ui-monospace, monospace; }
+#mapwrap { flex: 1; position: relative; background: #0b191e; }
+#map { position: absolute; inset: 0; }
+#scopeTools, #clickmode { position: absolute; z-index: 1; top: 10px; display: inline-flex; align-items: center; gap: 4px; }
+#scopeTools { left: 12px; }
+#scopeTools button { font-size: 12px; background: #112127; min-height: 32px; }
+#follow[aria-pressed=true] { color: var(--accent); border-color: #4e8c79; }
+#clickmode { right: 12px; color: var(--muted); font-size: 12px; padding-left: 6px; background: #0b191e; }
+#clickmode select { font-size: 12px; }
+.scope-key { position: absolute; left: 14px; bottom: 11px; display: flex; gap: 12px; color: var(--muted); font-size: 11px; pointer-events: none; background: #0b191edc; padding: 4px; }
+.scope-key span::before { content: ''; width: 6px; height: 6px; display: inline-block; margin-right: 4px; vertical-align: 1px; border-radius: 1px; background: var(--own); }
+.scope-key span:nth-child(2)::before { background: #4fd1ff; }
+.scope-key span:nth-child(3)::before { background: #c08cff; }
+#hud { padding: 15px 22px; background: var(--panel); border-block: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.hud-head, .metrics, .net-strip { display: flex; align-items: center; }
+.hud-head { gap: 12px; font-size: 12px; color: var(--muted); }
+.hud-head b { color: var(--own); font: 600 14px ui-monospace, monospace; }
+.hud-head time { margin-left: auto; }
+.metrics { margin: 12px 0 8px; }
+.metrics div { flex: 1; }
+.metrics small { display: block; color: var(--muted); font-size: 12px; }
+.metrics strong { font-size: clamp(23px, 2.2vw, 37px); font-weight: 500; letter-spacing: -.05em; line-height: 1.3; }
+.metrics span, .hud-more { font-size: 11px; color: var(--muted); }
+.hud-more { font-family: ui-monospace, monospace; }
+.net-strip { padding: 12px 22px; gap: 30px; }
+.net-strip b, .net-strip span { display: block; }
+.net-strip b { font-size: 12px; font-weight: 600; }
+.net-strip span { font-size: 11px; margin-top: 2px; color: var(--muted); }
+.net-strip button { margin-left: auto; }
+aside { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-left: 1px solid var(--line); background: var(--panel); }
+nav { display: flex; flex-wrap: wrap; padding-inline: 7px; border-bottom: 1px solid var(--line); }
+nav button { border: none; border-radius: 0; background: none; min-height: 46px; padding: 7px 9px; color: var(--muted); border-bottom: 2px solid transparent; }
+nav button.active { color: var(--accent); border-color: var(--accent); }
+.tab { display: none; overflow: auto; padding: 17px 15px 32px; flex: 1; }
+.tab.active { display: block; }
+fieldset { min-inline-size: 0; border: 1px solid var(--line); border-radius: 7px; margin: 0 0 15px; padding: 10px 12px 13px; }
+legend { padding: 0 5px; font-size: 14px; font-weight: 620; }
+.row { display: flex; align-items: center; gap: 6px 9px; margin: 5px 0; flex-wrap: wrap; }
+.row label, .grid2 label { color: var(--muted); font-size: 12px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr); gap: 6px 9px; align-items: center; }
+.grid2 input:not([type=checkbox]), .grid2 select { width: 100% !important; }
+.chk { display: inline-flex; align-items: center; gap: 4px; color: var(--text); }
+.muted, .hint { color: var(--muted); }
+.hint { font-size: 12px; line-height: 1.5; margin: 7px 0 0; }
+.hint:empty { display: none; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { color: var(--muted); font-weight: 500; background: var(--panel); }
+tr.sel td { background: #20433e; }
+td.mono, .mono { font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+.card { border: 1px solid var(--line); border-radius: 5px; padding: 11px; margin-bottom: 7px; background: #17272e; }
+.card h4 { margin: 0 0 4px; font-size: 14px; }
+.card p { margin: 0 0 8px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.card.cur { border-color: var(--accent); }
+.pill { font-size: 12px; }
+.pill.ok, .ev-next { color: var(--ok); }
+.pill.warn { color: var(--warn); }
+.pill.bad { color: var(--bad); }
+#logwrap { max-height: 55vh; overflow: auto; }
+#logwrap th { position: sticky; top: 0; }
+#toast { position: fixed; right: 12px; bottom: 14px; z-index: 10; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+#toast div { background: #20343b; border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 9px 12px; border-radius: 5px; max-width: min(420px, calc(100vw - 24px)); overflow-wrap: anywhere; }
+#toast div.err { border-left-color: var(--bad); }
+.ev-done { color: var(--muted); text-decoration: line-through; }
+[data-platform] { display: none; }
+@media (max-width: 800px) {
+  header { flex-wrap: wrap; gap: 12px; padding: 13px 15px; }
+  #linkState { margin-left: auto; }
+  .header-actions { flex: 1 1 100%; margin: 0; }
+  #profileSel { flex: 1 1 0; min-width: 0; width: 0; max-width: none; }
+  main { height: auto; min-height: 0; display: block; }
+  .scope-heading { padding: 12px 15px; }
+  #mapwrap { flex: auto; height: clamp(230px, 40vh, 450px); }
+  #hud, .net-strip { padding: 10px 15px; }
+  aside { border: 0; border-top: 1px solid var(--line); }
+  nav { position: sticky; top: 0; z-index: 2; background: var(--panel); }
+  nav button { min-height: 42px; }
+  .tab { padding: 14px 10px 40px; overflow: visible; }
+  .net-strip { gap: 18px; }
+}
+@media (max-width: 480px) {
+  header { gap: 10px; }
+  .brand { gap: 7px; }
+  .logo { width: 28px; height: 28px; }
+  .logo::before { width: 12px; }
+  .brand h1 { font-size: 16px; }
+  #linkState { font-size: 11px; max-width: 43%; }
+  .header-actions { gap: 5px; }
+  .header-actions label { display: none; }
+  .header-actions button { padding-inline: 7px; font-size: 12px; }
+  #scopeTools { left: 7px; }
+  #clickmode { right: 7px; }
+  #scopeTools button { padding-inline: 8px; }
+  #clickmode select { padding-inline: 3px; }
+  .metrics small { font-size: 11px; }
+  .metrics strong { font-size: 22px; }
+  nav { padding: 0 4px; }
+  nav button { flex: 1 0 auto; font-size: 12px; padding: 5px; }
+  .grid2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .grid2 span:empty { min-width: 0; }
+  #trafficBody .mono { font-size: 11px; }
+  #trafficBody td { padding-inline: 2px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo" aria-hidden="true"></span><div><h1>GDL 90 Emulator</h1><p>Bench simulation</p></div></div>
+  <div id="linkState" role="status">Connecting…</div>
+  <div class="header-actions">
+    <label for="profileSel">Receiver</label><select id="profileSel" disabled aria-label="Device profile"></select>
+    <button id="btnRun" disabled>Start</button><button id="btnPause" disabled>Pause</button>
+  </div>
+</header>
+<noscript>The control panel needs JavaScript enabled in your browser.</noscript>
+<main>
+  <section class="scope-panel" aria-label="Simulation instruments">
+    <div class="scope-heading"><h2>Traffic scope</h2><span id="pScenario">Waiting for telemetry</span></div>
+    <div id="mapwrap">
+      <div id="map"></div>
+      <div id="scopeTools" aria-label="Scope controls"><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="follow" aria-pressed="true">Follow</button></div>
+      <label id="clickmode">Tap scope <select id="clickSel">
+        <option value="none">Inspect traffic</option>
+        <option value="teleport">Move ownship</option>
+        <option value="waypoint">Add waypoint</option>
+        <option value="orbit">Set orbit centre</option>
+        <option value="traffic">Add traffic</option>
+        <option value="cell">Add storm cell</option>
+        <option value="station">Place ground station</option>
+        <option value="anchor">Set scenario anchor</option>
+      </select></label>
+      <div class="scope-key"><span>Ownship</span><span>Traffic</span><span>TIS-B</span></div>
+    </div>
+    <div id="hud" aria-label="Ownship telemetry">Waiting for ownship…</div>
+    <div class="net-strip"><div><b id="pHotspot">Access point</b><span id="pClients">Waiting for devices</span></div><div><b id="pRate">— msg/s</b><span id="pPorts">UDP 4000</span></div><button class="small" id="showNetwork">Network</button></div>
+  </section>
+  <aside aria-label="Simulation controls" inert>
+    <nav id="tabs" aria-label="Control panels"></nav>
+
+    <!-- FLY -->
+    <div class="tab" data-tab="Fly">
+      <fieldset><legend>Mode</legend>
+        <div class="row" id="modeBtns"></div>
+        <div class="hint" id="navInfo"></div>
+      </fieldset>
+      <fieldset><legend>Targets</legend>
+        <div class="grid2">
+          <label>Track °T</label><input type="number" data-path="flight.target_track" min="0" max="359">
+          <label>Altitude ft</label><input type="number" data-path="flight.target_alt_ft" step="100">
+          <label>TAS kt</label><input type="number" data-path="flight.target_speed_kt">
+          <label>Climb fpm</label><input type="number" data-path="flight.climb_fpm">
+          <label>Descent fpm</label><input type="number" data-path="flight.descent_fpm">
+          <label>Turn °/s</label><input type="number" data-path="flight.turn_rate_dps" step="0.5">
+          <label>Max bank °</label><input type="number" data-path="flight.max_bank_deg">
+          <label>Time ×</label><input type="number" data-path="flight.time_scale" step="0.5" min="0">
+        </div>
+        <div class="row">
+          <button class="small" data-nudge="flight.target_track:-10">◀ 10°</button>
+          <button class="small" data-nudge="flight.target_track:10">10° ▶</button>
+          <button class="small" data-nudge="flight.target_alt_ft:-500">▼ 500</button>
+          <button class="small" data-nudge="flight.target_alt_ft:500">▲ 500</button>
+          <button class="small" data-nudge="flight.target_speed_kt:-10">−10 kt</button>
+          <button class="small" data-nudge="flight.target_speed_kt:10">+10 kt</button>
+        </div>
+        <div class="hint">Arrow keys on the map: ←/→ track ±10°, ↑/↓ altitude ±500 ft.</div>
+      </fieldset>
+      <fieldset><legend>Route</legend>
+        <div class="row"><label class="chk"><input type="checkbox" data-path="flight.route_loop"> loop</label>
+          <span class="muted">loop to #</span><input type="number" data-path="flight.route_loop_to" min="0" style="width:60px">
+          <button class="small" id="btnRouteClear">Clear</button></div>
+        <table><thead><tr><th>#</th><th>Name</th><th>Alt</th><th>Kt</th><th></th></tr></thead><tbody id="routeBody"></tbody></table>
+        <div class="hint">Choose “Add waypoint” above the scope, then tap a position. Waypoints use the current altitude and speed targets.</div>
+      </fieldset>
+      <fieldset><legend>Orbit</legend>
+        <div class="grid2">
+          <label>Centre lat</label><input type="number" step="0.0001" data-path="flight.orbit.lat">
+          <label>lon</label><input type="number" step="0.0001" data-path="flight.orbit.lon">
+          <label>Radius nm</label><input type="number" step="0.1" min="0.1" data-path="flight.orbit.radius_nm">
+          <label class="chk"><input type="checkbox" data-path="flight.orbit.clockwise"> clockwise</label><span></span>
+        </div>
+      </fieldset>
+      <fieldset><legend>Environment</legend>
+        <div class="grid2">
+          <label>Wind from °T</label><input type="number" data-path="flight.wind_dir">
+          <label>Wind kt</label><input type="number" data-path="flight.wind_kt">
+          <label>Altimeter inHg</label><input type="number" step="0.01" data-path="flight.altimeter_inhg">
+          <label>Ground elev ft</label><input type="number" data-path="flight.ground_elev_ft">
+          <label>Geoid sep ft</label><input type="number" data-path="flight.geoid_sep_ft" title="HAE − MSL; about −60 to −120 ft over CONUS">
+          <label>Mag var °E</label><input type="number" step="0.1" data-path="flight.mag_var_deg">
+          <label>Rotate kt</label><input type="number" data-path="flight.rotate_kt">
+          <label>Accel kt/s</label><input type="number" step="0.5" data-path="flight.accel_kt_s">
+        </div>
+      </fieldset>
+      <fieldset><legend>Ownship identity</legend>
+        <div class="grid2">
+          <label>ICAO hex</label><input data-path="ownship.icao" style="width:90px">
+          <label>Call sign</label><input data-path="ownship.callsign" style="width:90px" title="Matching the iFly aircraft profile tail suppresses TIS-B ghosts">
+          <label>Emitter</label><select data-path="ownship.emitter" data-type="num" class="emitterSel"></select>
+          <label>Address type</label><select data-path="ownship.addr_type" data-type="num" class="addrSel"></select>
+          <label>NIC</label><input type="number" min="0" max="15" data-path="ownship.nic">
+          <label>NACp</label><input type="number" min="0" max="15" data-path="ownship.nacp">
+          <label class="chk"><input type="checkbox" data-path="ownship.gps_valid"> GPS valid</label><span></span>
+        </div>
+      </fieldset>
+      <fieldset><legend>Move ownship</legend>
+        <div class="row"><input id="tpLat" type="number" required min="-90" max="90" step="any" aria-label="Destination latitude" placeholder="lat"><input id="tpLon" type="number" required min="-180" max="180" step="any" aria-label="Destination longitude" placeholder="lon">
+          <input id="tpAlt" type="number" aria-label="Destination altitude in feet" placeholder="alt ft"><label class="chk"><input type="checkbox" id="tpGround"> on ground</label>
+          <button class="small" id="btnTeleport">Move</button></div>
+      </fieldset>
+    </div>
+
+    <!-- SCENARIOS -->
+    <div class="tab" data-tab="Scenarios">
+      <fieldset><legend>Anchor (airport the scenario is built around)</legend>
+        <div class="grid2">
+          <label>Lat</label><input type="number" step="0.0001" id="anLat">
+          <label>Lon</label><input type="number" step="0.0001" id="anLon">
+          <label>Runway °T</label><input type="number" id="anRwy">
+          <label>Elev ft</label><input type="number" id="anElev">
+        </div>
+        <div class="row"><button class="small" id="btnAnchorMap">Use scope centre</button><button class="small" id="btnAnchorOwn">Use ownship</button>
+          <span class="hint">Default airport is Salem, Oregon (KSLE).</span></div>
+      </fieldset>
+      <fieldset id="scenRun" style="display:none"><legend>Running</legend><div id="scenInfo"></div></fieldset>
+      <div id="scenList"></div>
+    </div>
+
+    <!-- TRAFFIC -->
+    <div class="tab" data-tab="Traffic">
+      <fieldset><legend>Add</legend>
+        <div class="row">
+          <button class="small" data-traffic='{"preset":"random"}'>Random</button>
+          <button class="small" data-traffic='{"preset":"random","count":10}'>Random ×10</button>
+          <button class="small" data-traffic='{"preset":"head_on","cpa_s":60}'>Head-on 60 s</button>
+          <button class="small" data-traffic='{"preset":"crossing","cpa_s":90,"alt_offset_ft":-300}'>Crossing R</button>
+          <button class="small" data-traffic='{"preset":"converging","rel_bearing":270,"cpa_s":90}'>Crossing L</button>
+          <button class="small" data-traffic='{"preset":"overtake","cpa_s":120,"alt_offset_ft":200}'>Overtaker</button>
+          <button class="small" data-traffic='{"preset":"shadow"}'>TIS-B shadow</button>
+          <button class="small danger" id="btnClearTraffic">Clear all</button>
+        </div>
+      </fieldset>
+      <table><thead><tr><th>Call</th><th>ICAO/t</th><th>Rel alt</th><th>Rng/Brg</th><th>Kt</th><th></th></tr></thead><tbody id="trafficBody"></tbody></table>
+      <fieldset id="tEdit" style="display:none; margin-top:10px"><legend id="tEditTitle">Target</legend>
+        <div class="grid2">
+          <label>Call sign</label><input id="te_callsign">
+          <label>ICAO hex</label><input id="te_address" required pattern="[a-fA-F0-9]{1,6}" maxlength="6">
+          <label>Address type</label><select id="te_addr_type" class="addrSel"></select>
+          <label>Emitter</label><select id="te_emitter" class="emitterSel"></select>
+          <label>Alert</label><select id="te_alert"><option>auto</option><option>on</option><option>off</option></select>
+          <label>Emergency</label><select id="te_emergency" class="emergSel"></select>
+          <label>NIC</label><input type="number" id="te_nic" min="0" max="15">
+          <label>NACp</label><input type="number" id="te_nacp" min="0" max="15">
+          <label>Track type</label><select id="te_track_type" class="trackTypeSel"></select>
+          <label>Alt ft</label><input type="number" id="te_alt">
+          <label>Speed kt</label><input type="number" id="te_gs">
+          <label>VS fpm</label><input type="number" id="te_vs">
+          <label class="chk"><input type="checkbox" id="te_silent"> silent</label>
+          <label class="chk"><input type="checkbox" id="te_alt_invalid"> alt invalid</label>
+          <label class="chk"><input type="checkbox" id="te_extrapolated"> extrapolated</label><span></span>
+        </div>
+        <div class="row"><button class="small primary" id="btnTApply">Apply</button><button class="small" id="btnTClose">Close</button></div>
+      </fieldset>
+    </div>
+
+    <!-- PROTOCOL -->
+    <div class="tab" data-tab="Protocol">
+      <fieldset><legend>Device profile</legend><div id="profileCards"></div></fieldset>
+      <fieldset><legend>Message streams</legend>
+        <table><thead><tr><th>On</th><th>Message</th><th>Hz</th><th>Sent</th></tr></thead><tbody id="streamBody"></tbody></table>
+      </fieldset>
+      <fieldset><legend>Heartbeat (ID 0)</legend>
+        <div class="row"><label>GPS Pos Valid</label><select data-path="heartbeat.gps_pos_valid" data-type="optbool"><option value="">follow sim</option><option value="true">1</option><option value="false">0</option></select></div>
+        <div class="row">
+          <label class="chk"><input type="checkbox" data-path="heartbeat.uat_initialized"> UAT init</label>
+          <label class="chk"><input type="checkbox" data-path="heartbeat.utc_ok"> UTC OK</label>
+          <label class="chk"><input type="checkbox" data-path="heartbeat.maint_required"> Maint req'd</label>
+          <label class="chk"><input type="checkbox" data-path="heartbeat.ident"> IDENT</label>
+          <label class="chk"><input type="checkbox" data-path="heartbeat.addr_type"> Addr type</label>
+          <label class="chk"><input type="checkbox" data-path="heartbeat.gps_batt_low"> GPS batt low</label>
+          <label class="chk"><input type="checkbox" data-path="heartbeat.ratcs"> RATCS</label>
+          <label class="chk"><input type="checkbox" data-path="heartbeat.csa_requested"> CSA req</label>
+          <label class="chk"><input type="checkbox" data-path="heartbeat.csa_not_available"> CSA n/a</label>
+        </div>
+        <div class="grid2">
+          <label>Uplink count</label><input type="number" min="0" max="31" data-path="heartbeat.uplink_count" data-type="optnum" placeholder="auto">
+          <label>Basic/Long</label><input type="number" min="0" max="1023" data-path="heartbeat.basic_long_count" data-type="optnum" placeholder="auto">
+        </div>
+      </fieldset>
+      <fieldset><legend>Ownship report (ID 10)</legend>
+        <div class="grid2">
+          <label>Track type</label><select data-path="ownship.track_type" data-type="num" class="trackTypeSel"></select>
+          <label>Air/ground</label><select data-path="ownship.air_ground"><option>auto</option><option>air</option><option>ground</option></select>
+          <label>Alert (s)</label><input type="number" min="0" max="15" data-path="ownship.alert">
+          <label>Emergency</label><select data-path="ownship.emergency" data-type="num" class="emergSel"></select>
+          <span></span><span></span>
+        </div>
+        <div class="row">
+          <label class="chk"><input type="checkbox" data-path="ownship.extrapolated"> extrapolated</label>
+          <label class="chk"><input type="checkbox" data-path="ownship.alt_invalid"> alt 0xFFF</label>
+          <label class="chk"><input type="checkbox" data-path="ownship.hvel_invalid"> h-vel 0xFFF</label>
+          <label class="chk"><input type="checkbox" data-path="ownship.vvel_invalid"> v-vel 0x800</label>
+        </div>
+      </fieldset>
+      <fieldset><legend>Geo altitude (ID 11) / HAT (ID 9)</legend>
+        <div class="grid2">
+          <label>Datum</label><select data-path="ownship.geo_alt_datum"><option value="hae">HAE (ICD)</option><option value="msl">MSL</option></select>
+          <label>VFOM m</label><input type="number" data-path="ownship.vfom_m" title="-1 = not available">
+          <label class="chk"><input type="checkbox" data-path="ownship.vertical_warning"> vertical warning</label><span></span>
+          <label>HAT override</label><input type="number" data-path="ownship.hat_ft" data-type="optnum" placeholder="auto">
+        </div>
+        <div class="hint">iFly only accepts the ADS-B position as GPS once it receives 0x0B (or a vendor status that reports a fix).</div>
+      </fieldset>
+      <fieldset><legend>AHRS</legend>
+        <div class="row">
+          <label class="chk"><input type="checkbox" data-path="ahrs.valid"> valid</label>
+          <label class="chk"><input type="checkbox" data-path="ahrs.heading_magnetic"> magnetic heading</label>
+          <label class="chk"><input type="checkbox" data-path="ahrs.send_airspeed"> airspeed</label>
+        </div>
+        <div class="grid2">
+          <label>Roll offset °</label><input type="number" data-path="ahrs.roll_offset">
+          <label>Pitch offset °</label><input type="number" data-path="ahrs.pitch_offset">
+          <label>Hdg offset °</label><input type="number" data-path="ahrs.heading_offset">
+          <label>Roll sign</label><select data-path="ahrs.roll_sign" data-type="num"><option value="1">normal</option><option value="-1">mirrored</option></select>
+        </div>
+      </fieldset>
+      <fieldset><legend>ForeFlight ID (0x65/0)</legend>
+        <div class="grid2">
+          <label>Serial hex</label><input data-path="foreflight.serial_hex" style="width:150px">
+          <label>Name (8)</label><input data-path="foreflight.name" maxlength="8" style="width:90px">
+          <label>Long name (16)</label><input data-path="foreflight.long_name" maxlength="16">
+          <label>Internet</label><select data-path="foreflight.internet_policy" data-type="num"><option value="0">unrestricted</option><option value="1">expensive</option><option value="2">disallowed</option></select>
+          <label class="chk"><input type="checkbox" data-path="foreflight.geo_alt_msl"> geo alt is MSL</label><span></span>
+        </div>
+      </fieldset>
+      <fieldset><legend>Receiver details</legend>
+        <div class="grid2">
+          <label>Stratux ver</label><input data-path="vendor.stratux_version" data-type="u8x4" style="width:90px">
+          <label>Sats</label><input type="number" data-path="vendor.sats_locked">
+          <label class="chk"><input type="checkbox" data-path="vendor.waas"> WAAS fix</label><span></span>
+          <label>Pathfinder batt %</label><input type="number" data-path="vendor.pathfinder_battery">
+          <label>Sim name</label><input data-path="vendor.xplane_sim_name" style="width:110px">
+        </div>
+      </fieldset>
+      <fieldset><legend>Output</legend>
+        <div class="grid2">
+          <label>GDL 90 ports</label><input data-path="output.ports" data-type="numlist" style="width:120px">
+          <label>Delivery</label><select data-path="output.delivery"><option>auto</option><option>broadcast</option><option>unicast</option><option>both</option></select>
+          <label data-platform="pc">Broadcast address</label><input data-platform="pc" data-path="output.broadcast_addr">
+          <label>X-Plane port</label><input type="number" data-path="output.xplane_port">
+          <label>NMEA port</label><input type="number" data-path="output.nmea_port">
+          <span></span><span></span>
+        </div>
+        <div class="row">
+          <label class="chk" data-platform="pc"><input type="checkbox" data-path="output.localhost"> Also send to this computer</label>
+          <label class="chk"><input type="checkbox" data-path="output.per_message_datagrams"> one datagram per message</label>
+        </div>
+        <div class="row"><label>Extra targets</label><input data-path="output.targets" data-type="strlist" style="flex:1" placeholder="192.168.4.20"></div>
+        <div class="hint" data-platform="esp32">Devices on the ESP32 Wi-Fi are discovered automatically. For a fixed client, enter its IP address on the same network.</div>
+      </fieldset>
+      <fieldset data-feature="config_files"><legend>Config file</legend>
+        <div class="row"><input id="cfgPath" value="gdl90-emu.json" style="flex:1"><button class="small" id="btnSaveCfg">Save</button><button class="small" id="btnLoadCfg">Load</button><button class="small danger" id="btnResetCfg">Reset</button></div>
+      </fieldset>
+      <fieldset data-platform="esp32"><legend>Power-on settings (ESP32 flash)</legend>
+        <div class="row"><button class="small primary" id="btnSaveDefault">Save current setup as power-on default</button>
+          <button class="small" id="btnClearDefault">Forget saved setup</button>
+          <button class="small danger" id="btnResetCfg2">Reset to defaults</button>
+          <button class="small danger" id="btnReboot">Reboot ESP32</button></div>
+        <div class="hint">Save the receiver profile, flight settings, route, weather and Wi-Fi configuration for the next power-up. Aircraft positions and live traffic reset on restart.</div>
+      </fieldset>
+    </div>
+
+    <!-- WEATHER -->
+    <div class="tab" data-tab="Weather">
+      <fieldset><legend>Uplink</legend>
+        <div class="grid2">
+          <label class="chk"><input type="checkbox" data-path="streams.uplink.enabled"> send uplinks</label><span></span>
+          <label>Per second</label><input type="number" step="0.5" data-path="streams.uplink.rate_hz">
+          <label>Rebuild s</label><input type="number" data-path="weather.rebuild_s">
+          <label class="chk"><input type="checkbox" data-path="weather.station_auto"> auto station</label><span></span>
+          <label>Station lat</label><input type="number" step="0.0001" data-path="weather.station_lat">
+          <label>lon</label><input type="number" step="0.0001" data-path="weather.station_lon">
+          <label>Auto offset nm</label><input type="number" data-path="weather.station_offset_nm">
+          <label>TIS-B site</label><input type="number" min="0" max="15" data-path="weather.tisb_site_id">
+        </div>
+        <div class="hint" id="upInfo"></div>
+      </fieldset>
+      <fieldset><legend>Text products (413, DLAC)</legend>
+        <textarea id="wxText" rows="7" data-path="weather.text" data-type="lines"></textarea>
+        <div class="hint">One record per line: METAR / SPECI / TAF / PIREP / WINDS, then station, time, text. Tokens: {TIME} → DDHHMMZ now, {VALID} → TAF validity, {FM} → DDHHMM +6 h.</div>
+      </fieldset>
+      <fieldset><legend>NEXRAD cells</legend>
+        <div class="row"><label>Product</label><select data-path="weather.nexrad_product" data-type="num"><option value="63">63 regional</option><option value="64">64 CONUS</option></select>
+          <button class="small" id="btnCellsClear">Clear cells</button></div>
+        <table><thead><tr><th>Lat</th><th>Lon</th><th>R nm</th><th>Peak</th><th></th></tr></thead><tbody id="cellBody"></tbody></table>
+        <div class="hint">Choose “Add storm cell” above the scope, then tap a position. Peak values 2–7 represent VIP 1–6. Use cells between 0° and 60°N.</div>
+      </fieldset>
+    </div>
+
+    <!-- NETWORK -->
+    <div class="tab" data-tab="Network">
+      <fieldset data-platform="esp32"><legend>ESP32 Wi-Fi</legend>
+        <div id="apInfo" class="hint"></div>
+        <div class="grid2">
+          <label>Network name</label><input required data-path="network.ssid" maxlength="32" style="width:150px">
+          <label>Password</label><input type="password" autocomplete="off" minlength="8" data-path="network.passphrase" maxlength="63" style="width:120px" placeholder="(open)">
+          <label>Channel</label><select data-path="network.channel" data-type="num"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option></select>
+          <span></span><span></span>
+        </div>
+        <div class="row"><label class="chk"><input type="checkbox" data-path="network.captive_portal"> pop this control panel up on any device that joins</label></div>
+        <div class="row"><button class="small primary" id="btnApplyWifi">Restart Wi-Fi with these settings</button></div>
+        <div class="hint">Join this Wi-Fi network on your test device and select a GDL 90 receiver in its EFB app. Leave the password empty for an open network, or enter 8–63 characters for WPA2. Rejoin devices after changing the network. Save power-on settings in Protocol to keep changes after a reboot.</div>
+      </fieldset>
+      <fieldset data-feature="hotspot"><legend>Hotspot</legend>
+        <div id="hsState" class="row"></div>
+        <div class="grid2">
+          <label>SSID</label><input data-path="network.ssid" style="width:140px">
+          <label>Passphrase</label><input data-path="network.passphrase" style="width:120px">
+          <label>Prefer adapter</label><input data-path="network.adapter_match" style="width:100px" title="Description substring">
+          <label class="chk"><input type="checkbox" data-path="network.auto_hotspot"> auto-start</label><span></span>
+          <label>Band</label><select data-path="network.band"><option value="auto">auto (share uplink channel)</option><option value="2.4">2.4 GHz</option><option value="5">5 GHz</option></select>
+          <span></span><span></span>
+        </div>
+        <div class="row"><button class="primary small" id="btnHsStart">Start hotspot</button><button class="small" id="btnHsStop">Stop</button><button class="small" id="btnRescan">Rescan adapters</button></div>
+        <div class="hint">The SSID/passphrase apply the next time the hotspot starts.</div>
+      </fieldset>
+      <fieldset data-feature="hotspot"><legend>Wi-Fi adapters</legend><div id="adapterList"></div></fieldset>
+      <fieldset><legend>Devices</legend>
+        <table><thead><tr><th>IP</th><th>MAC / name</th><th>Seen via</th><th>Age</th></tr></thead><tbody id="clientBody"></tbody></table>
+        <div class="hint" id="netInfo"></div>
+      </fieldset>
+      <fieldset data-feature="hotspot"><legend>Log</legend><div id="wifiLog" class="mono" style="font-size:11.5px"></div></fieldset>
+    </div>
+
+    <!-- PACKETS -->
+    <div class="tab" data-tab="Packets">
+      <fieldset><legend>Live</legend>
+        <div class="row"><input aria-label="Filter packet log" id="logFilter" placeholder="filter (name / text / flag)" style="flex:1">
+          <label class="chk"><input type="checkbox" id="logPause"> pause</label>
+          <label class="chk"><input type="checkbox" id="logHex"> hex</label>
+          <button class="small" id="btnLogClear">Clear</button><button class="small" id="btnStatsReset">Reset stats</button></div>
+        <div id="statsLine" class="hint mono"></div>
+        <div id="logwrap"><table><thead><tr><th>Time</th><th>Msg</th><th>Len</th><th>Decoded</th></tr></thead><tbody id="logBody"></tbody></table></div>
+      </fieldset>
+      <fieldset data-feature="record"><legend>Capture to file</legend>
+        <div class="row"><input id="recPath" aria-label="Capture path" placeholder="Automatic filename" style="flex:1"><button id="recordButton" class="small">Record</button></div>
+      </fieldset>
+      <fieldset data-feature="replay"><legend>Replay a capture</legend>
+        <input type="file" id="replayFile" accept=".bin" aria-label="Capture file to replay">
+        <div class="row"><label for="replaySpeed">Speed ×</label><input type="number" step="any" min="0.1" max="20" id="replaySpeed" value="1">
+          <label class="chk"><input type="checkbox" id="replayLoop"> Loop</label>
+          <button class="small" id="startReplay">Play</button><button class="small" id="stopReplay">Stop replay</button></div>
+      </fieldset>
+    </div>
+  </aside>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+let CFG = null, CAT = null, ST = null, NET = null, WIFI = null;
+let selTarget = null, logRows = [], lastTables = 0;
+
+const EMITTERS = {0:'0 none',1:'1 light',2:'2 small',3:'3 large',4:'4 hi-vortex',5:'5 heavy',6:'6 high-perf',7:'7 rotorcraft',9:'9 glider',10:'10 balloon',11:'11 parachute',12:'12 ultralight',14:'14 UAV',15:'15 space',17:'17 emerg veh',18:'18 service veh',19:'19 point obst',20:'20 cluster obst',21:'21 line obst'};
+const ADDR = {0:'0 ADS-B ICAO',1:'1 ADS-B self',2:'2 TIS-B ICAO',3:'3 TIS-B track',4:'4 surface',5:'5 beacon'};
+const EMERG = {0:'0 none',1:'1 general',2:'2 medical',3:'3 min fuel',4:'4 no comm',5:'5 unlawful',6:'6 downed'};
+const TRACKT = {0:'0 invalid',1:'1 true track',2:'2 mag heading',3:'3 true heading'};
+const STREAMS = [
+  ['heartbeat','0x00 Heartbeat','Heartbeat'],['ownship','0x0A Ownship','Ownship'],['geo_alt','0x0B Geo altitude','OwnshipGeoAlt'],
+  ['traffic','0x14 Traffic','Traffic'],['uplink','0x07 FIS-B uplink','Uplink'],['hat','0x09 Height above terrain','HeightAboveTerrain'],
+  ['ff_id','0x65/0 ForeFlight ID','FF-ID'],['ff_ahrs','0x65/1 ForeFlight AHRS','FF-AHRS'],['levil_ahrs','0x4C LE AHRS (Levil/Stratux)','LE-AHRS'],
+  ['stratux_heartbeat','0xCC Stratux heartbeat','StratuxHB'],['stratux_status',"'SX' Stratux status",'SX-Status'],
+  ['skyradar_status','0x65 SkyRadar status','FF-?'],['clarity_status','0x3C Clarity status','Unknown'],['clarity_ahrs','0x3D Clarity AHRS','Unknown'],
+  ['xgps_ahrs','0x44 XGPS190 AHRS','Unknown'],['pathfinder_status','0x46/1 Pathfinder status','Unknown'],['pathfinder_ahrs','0x46/2 Pathfinder AHRS','Unknown'],
+  ['xplane_gps','XGPS text','XGPS'],['xplane_att','XATT text','XATT'],['xplane_traffic','XTRAFFIC text','XTRAFFIC'],['nmea','NMEA $GPRMC/$GPGGA','NMEA'],
+];
+
+function toast(msg, err) {
+  const d = document.createElement('div'); d.textContent = msg; if (err) d.className = 'err';
+  $('#toast').appendChild(d); setTimeout(() => d.remove(), err ? 7000 : 3500);
+}
+class PanelError extends Error {}
+async function api(path, body) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  const options = {signal: controller.signal, cache: 'no-store'};
+  if (body !== undefined) Object.assign(options, {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+  });
+  try {
+    const response = await fetch(path, options);
+    if (!response.ok) throw new PanelError((await response.text()).slice(0, 320) || response.statusText);
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+// Preserve edit order, especially when the user tabs out of a Wi-Fi field and immediately clicks Apply.
+let writes = Promise.resolve(), lastConfigRead = 0;
+function edit(operation) {
+  const run = writes.then(operation).catch(error => {
+    const reported = error instanceof PanelError ? error : new PanelError('Could not reach the emulator. Check the connection and try again.');
+    toast(reported.message, true);
+    throw reported;
+  });
+  writes = run.catch(() => {});
+  return run;
+}
+window.addEventListener('unhandledrejection', e => {
+  if (e.reason instanceof PanelError) e.preventDefault();
+});
+const getPath = (o, p) => p.split('.').reduce((a, k) => (a == null ? undefined : a[k]), o);
+function makePatch(p, v) { const keys = p.split('.'); const root = {}; let cur = root;
+  keys.forEach((k, i) => { if (i === keys.length - 1) cur[k] = v; else cur = cur[k] = {}; }); return root; }
+function patch(p) { return edit(async () => { CFG = await api('/api/config', p); renderConfig(); }); }
+function act(type, extra = {}) { return edit(async () => {
+  const r = await api('/api/action', {type, ...extra});
+  if (r?.config) { CFG = r.config; renderConfig(); }
+  return r;
+}); }
+function netAct(type, extra = {}) { return edit(async () => {
+  const r = await api('/api/net/action', {type, ...extra});
+  if (r?.message) toast(r.message);
+  return r;
+}); }
+
+function fillSelect(sel, map) { sel.innerHTML = Object.entries(map).map(([v, l]) => `<option value="${v}">${l}</option>`).join(''); }
+$$('.emitterSel').forEach(s => fillSelect(s, EMITTERS)); $$('.addrSel').forEach(s => fillSelect(s, ADDR));
+$$('.emergSel').forEach(s => fillSelect(s, EMERG)); $$('.trackTypeSel').forEach(s => fillSelect(s, TRACKT));
+
+function readEl(el) {
+  const ty = el.dataset.type || (el.type === 'checkbox' ? 'bool' : el.type === 'number' ? 'num' : 'str');
+  switch (ty) {
+    case 'bool': return el.checked;
+    case 'num': return el.value === '' ? 0 : Number(el.value);
+    case 'optnum': return el.value === '' ? null : Number(el.value);
+    case 'optbool': return el.value === '' ? null : el.value === 'true';
+    case 'numlist': return el.value.split(/[\s,]+/).filter(Boolean).map(Number);
+    case 'strlist': return el.value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    case 'lines': return el.value.split('\n').map(s => s.trimEnd()).filter(s => s.trim());
+    case 'u8x4': return el.value.split(/[.\s,]+/).map(Number).concat([0,0,0,0]).slice(0, 4);
+    default: return el.value;
+  }
+}
+function writeEl(el, v) {
+  const ty = el.dataset.type || (el.type === 'checkbox' ? 'bool' : el.type === 'number' ? 'num' : 'str');
+  if (ty === 'bool') el.checked = !!v;
+  else if (ty === 'optbool') el.value = v == null ? '' : String(v);
+  else if (ty === 'optnum') el.value = v == null ? '' : v;
+  else if (ty === 'numlist' || ty === 'strlist') el.value = (v || []).join(', ');
+  else if (ty === 'lines') el.value = (v || []).join('\n');
+  else if (ty === 'u8x4') el.value = (v || []).join('.');
+  else if (ty === 'num' && typeof v === 'number') el.value = Math.round(v * 10000) / 10000;
+  else el.value = v == null ? '' : v;
+}
+function sendField(el) {
+  if (!el.reportValidity()) return;
+  patch(makePatch(el.dataset.path, readEl(el))).catch(() => writeEl(el, getPath(CFG, el.dataset.path)));
+}
+$$('[data-path]').forEach(el => el.addEventListener('change', () => sendField(el)));
+$$('label').forEach((label, i) => {
+  const input = label.nextElementSibling;
+  if (!label.control && input?.matches('input,select,textarea')) {
+    input.id ||= 'field-' + i;
+    label.htmlFor = input.id;
+  }
+});
+
+function renderConfig() {
+  if (!CFG) return;
+  $$('[data-path]').forEach(el => { if (el !== document.activeElement) writeEl(el, getPath(CFG, el.dataset.path)); });
+  lastConfigRead = Date.now();
+  $('#profileSel').value = CFG.profile;
+  $('#pPorts').textContent = 'UDP ' + CFG.output.ports.join(', ');
+  $$('#profileCards .card').forEach(c => c.classList.toggle('cur', c.dataset.id === CFG.profile));
+  $$('#modeBtns button').forEach(b => b.classList.toggle('on', b.dataset.mode === CFG.flight.mode));
+  renderRoute(); renderStreams(); renderCells(); scopeDraw();
+}
+
+// ---- tabs ------------------------------------------------------------------------------------
+const TABS = $$('.tab').map(t => t.dataset.tab);
+$('#tabs').innerHTML = TABS.map(t => `<button data-t="${t}">${t}</button>`).join('');
+function showTab(t) { $$('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === t)); $$('#tabs button').forEach(b => { b.classList.toggle('active', b.dataset.t === t); b.setAttribute('aria-pressed', String(b.dataset.t === t)); }); try { localStorage.setItem('gdl90tab', t); } catch (e) {} }
+$('#tabs').addEventListener('click', e => { if (e.target.dataset.t) showTab(e.target.dataset.t); });
+$('#showNetwork').onclick = () => { showTab('Network'); $('#tabs').scrollIntoView({block:'nearest'}); };
+let savedTab = 'Fly'; try { savedTab = localStorage.getItem('gdl90tab') || 'Fly'; } catch (e) {}
+showTab(TABS.includes(savedTab) ? savedTab : 'Fly');
+
+// ---- header ------------------------------------------------------------------------------------
+$('#btnRun').onclick = () => act(ST && ST.running ? 'stop' : 'start');
+$('#btnPause').onclick = () => act(ST && ST.paused ? 'resume' : 'pause');
+$('#profileSel').onchange = e => act('apply_profile', { id: e.target.value }).then(() => toast('Profile applied'));
+
+// ---- fly -------------------------------------------------------------------------------------
+$('#modeBtns').innerHTML = ['manual', 'route', 'orbit', 'parked'].map(m => `<button class="small" data-mode="${m}">${m}</button>`).join('');
+$('#modeBtns').onclick = e => { if (e.target.dataset.mode) patch({ flight: { mode: e.target.dataset.mode } }); };
+$$('[data-nudge]').forEach(b => b.onclick = () => { const [p, d] = b.dataset.nudge.split(':'); let v = getPath(CFG, p) + Number(d);
+  if (p.endsWith('track')) v = (v + 360) % 360; patch(makePatch(p, v)); });
+$('#btnRouteClear').onclick = () => act('route_clear');
+function renderRoute() {
+  const r = CFG.flight.route || [];
+  $('#routeBody').innerHTML = r.map((w, i) => `<tr${ST && ST.nav && ST.nav.wp_index === i && CFG.flight.mode === 'route' ? ' class="sel"' : ''}><td>${i}</td><td>${esc(w.name)}</td>
+    <td><input type="number" value="${w.alt_ft}" data-wi="${i}" aria-label="Waypoint altitude" data-wk="alt_ft" style="width:70px"></td>
+    <td><input type="number" value="${w.speed_kt}" data-wi="${i}" aria-label="Waypoint speed" data-wk="speed_kt" style="width:55px"></td>
+    <td><button class="small" aria-label="Remove waypoint ${i+1}" data-wdel="${i}">✕</button></td></tr>`).join('');
+}
+$('#routeBody').addEventListener('change', e => { const i = e.target.dataset.wi; if (i == null) return;
+  const r = CFG.flight.route.map(w => ({...w})); r[i][e.target.dataset.wk] = Number(e.target.value); patch({ flight: { route: r } }); });
+$('#routeBody').addEventListener('click', e => { const i = e.target.dataset.wdel; if (i == null) return;
+  const r = CFG.flight.route.map(w => ({...w})); r.splice(Number(i), 1); patch({ flight: { route: r } }); });
+$('#btnTeleport').onclick = () => { if (!$('#tpLat').reportValidity() || !$('#tpLon').reportValidity()) return; const v = { lat: +$('#tpLat').value, lon: +$('#tpLon').value, on_ground: $('#tpGround').checked };
+  if ($('#tpAlt').value) v.alt_ft = +$('#tpAlt').value; act('teleport', v); };
+document.addEventListener('keydown', e => {
+  if (document.activeElement !== scope?.c || !CFG) return;
+  const f = CFG.flight; let p = null;
+  if (e.key === 'ArrowLeft') p = { flight: { target_track: (f.target_track + 350) % 360, mode: f.mode === 'parked' ? 'manual' : f.mode } };
+  if (e.key === 'ArrowRight') p = { flight: { target_track: (f.target_track + 10) % 360 } };
+  if (e.key === 'ArrowUp') p = { flight: { target_alt_ft: f.target_alt_ft + 500 } };
+  if (e.key === 'ArrowDown') p = { flight: { target_alt_ft: Math.max(0, f.target_alt_ft - 500) } };
+  if (p) { e.preventDefault(); patch(p); }
+});
+
+// ---- scenarios ---------------------------------------------------------------------------------
+function anchor() { return { lat: +$('#anLat').value, lon: +$('#anLon').value, runway_hdg: +$('#anRwy').value, elev_ft: +$('#anElev').value }; }
+function setAnchor(a) { $('#anLat').value = a.lat.toFixed(5); $('#anLon').value = a.lon.toFixed(5); if (a.runway_hdg != null) $('#anRwy').value = a.runway_hdg; if (a.elev_ft != null) $('#anElev').value = a.elev_ft; scopeDraw(); }
+$('#btnAnchorMap').onclick = () => { if (scope && scope.center) setAnchor({ lat: scope.center[0], lon: scope.center[1] }); };
+$('#btnAnchorOwn').onclick = () => { if (ST) setAnchor({ lat: ST.own.lat, lon: ST.own.lon, runway_hdg: Math.round(ST.own.track), elev_ft: CFG.flight.ground_elev_ft }); };
+$('#scenList').addEventListener('click', e => { const id = e.target.dataset.scen; if (!id) return;
+  act('load_scenario', { id, anchor: anchor() }).then(() => { toast('Loaded ' + id); trail = []; setFollow(true); }); });
+
+// ---- traffic -----------------------------------------------------------------------------------
+$$('[data-traffic]').forEach(b => b.onclick = () => act('add_traffic', JSON.parse(b.dataset.traffic)));
+$('#btnClearTraffic').onclick = () => act('clear_traffic');
+$('#trafficBody').addEventListener('click', e => {
+  const del = e.target.dataset.tdel; if (del) { act('remove_traffic', { id: +del }); return; }
+  const tr = e.target.closest('tr'); if (tr && tr.dataset.id) openTarget(+tr.dataset.id);
+});
+function openTarget(id) {
+  selTarget = id; const t = ST && ST.traffic.find(x => x.id === id); if (!t) return;
+  $('#tEdit').style.display = ''; $('#tEditTitle').textContent = `Target #${id}`;
+  $('#te_callsign').value = t.callsign; $('#te_address').value = t.address; $('#te_addr_type').value = t.addr_type;
+  $('#te_emitter').value = t.emitter; $('#te_alert').value = t.alert; $('#te_emergency').value = t.emergency;
+  $('#te_alt').value = Math.round(t.alt_ft); $('#te_gs').value = Math.round(t.gs_kt); $('#te_vs').value = Math.round(t.vs_fpm);
+  $('#te_silent').checked = t.silent;
+  for (const k of ['nic', 'nacp', 'track_type', 'alt_invalid', 'extrapolated']) {
+    const el = $('#te_' + k); el.disabled = t[k] == null;
+    if (el.type === 'checkbox') el.checked = !!t[k]; else el.value = t[k] ?? '';
+  }
+}
+$('#btnTClose').onclick = () => { selTarget = null; $('#tEdit').style.display = 'none'; };
+$('#btnTApply').onclick = () => {
+  if (selTarget == null || !$('#te_address').reportValidity()) return;
+  const p = { callsign: $('#te_callsign').value, address: parseInt($('#te_address').value, 16) || 0, addr_type: +$('#te_addr_type').value,
+    emitter: +$('#te_emitter').value, alert: $('#te_alert').value, emergency: +$('#te_emergency').value, silent: $('#te_silent').checked,
+    kin: { alt_ft: +$('#te_alt').value, gs_kt: +$('#te_gs').value, tas_kt: +$('#te_gs').value, vs_fpm: +$('#te_vs').value } };
+  for (const k of ['nic', 'nacp', 'track_type', 'alt_invalid', 'extrapolated']) {
+    const el = $('#te_' + k);
+    if (!el.disabled && el.value !== '') p[k] = el.type === 'checkbox' ? el.checked : +el.value;
+  }
+  patch({ _traffic: { [selTarget]: p } }).then(() => toast('Target updated'));
+};
+
+// ---- protocol ----------------------------------------------------------------------------------
+$('#profileCards').addEventListener('click', e => { const id = e.target.dataset.prof; if (id) act('apply_profile', { id }).then(() => toast('Profile applied')); });
+function renderStreams() {
+  const per = (ST && ST.stats && ST.stats.per_type) || {};
+  $('#streamBody').innerHTML = STREAMS.filter(([k]) => CFG.streams[k]).map(([k, label, logName]) => { const s = CFG.streams[k];
+    return `<tr><td><input type="checkbox" aria-label="Enable ${label}" data-sk="${k}" ${s.enabled ? 'checked' : ''}></td><td>${label}</td>
+      <td><input type="number" step="0.5" min="0" value="${s.rate_hz}" aria-label="${label} frequency" data-sr="${k}" style="width:60px"></td><td class="mono" data-sc="${logName}">${per[logName] || ''}</td></tr>`; }).join('');
+}
+$('#streamBody').addEventListener('change', e => {
+  if (!e.target.reportValidity()) return;
+  if (e.target.dataset.sk) patch({ streams: { [e.target.dataset.sk]: { enabled: e.target.checked } } });
+  if (e.target.dataset.sr) patch({ streams: { [e.target.dataset.sr]: { rate_hz: Number(e.target.value) } } });
+});
+$('#btnSaveCfg').onclick = () => act('save_config', { path: $('#cfgPath').value }).then(r => toast('Saved ' + r.result.path));
+$('#btnLoadCfg').onclick = () => act('load_config', { path: $('#cfgPath').value }).then(() => toast('Loaded'));
+$('#btnResetCfg').onclick = () => { if (confirm('Reset all settings (network/output kept)?')) act('reset_config'); };
+
+// ---- weather -----------------------------------------------------------------------------------
+function renderCells() {
+  $('#cellBody').innerHTML = (CFG.weather.cells || []).map((c, i) => `<tr><td>${c.lat.toFixed(3)}</td><td>${c.lon.toFixed(3)}</td>
+    <td><input type="number" step="any" min="0.1" max="30" aria-label="Cell radius in nautical miles" value="${c.radius_nm}" data-ci="${i}" data-ck="radius_nm" style="width:55px"></td>
+    <td><input type="number" min="2" max="7" value="${c.intensity}" data-ci="${i}" aria-label="Cell intensity" data-ck="intensity" style="width:45px"></td>
+    <td><button class="small" aria-label="Remove cell ${i+1}" data-cdel="${i}">✕</button></td></tr>`).join('');
+}
+$('#cellBody').addEventListener('change', e => { if (!e.target.reportValidity()) return; const i = e.target.dataset.ci; if (i == null) return; const c = CFG.weather.cells.map(c => ({...c}));
+  c[i][e.target.dataset.ck] = Number(e.target.value); patch({ weather: { cells: c } }); });
+$('#cellBody').addEventListener('click', e => { const i = e.target.dataset.cdel; if (i == null) return; const c = CFG.weather.cells.map(c => ({...c}));
+  c.splice(+i, 1); patch({ weather: { cells: c } }); });
+$('#btnCellsClear').onclick = () => patch({ weather: { cells: [] } });
+// ---- network -----------------------------------------------------------------------------------
+$('#btnHsStart').onclick = () => netAct('hotspot_start');
+$('#btnHsStop').onclick = () => netAct('hotspot_stop');
+$('#btnRescan').onclick = () => netAct('rescan');
+$('#adapterList').addEventListener('click', e => {
+  if (e.target.dataset.use != null) {
+    const a = WIFI && (WIFI.adapters || []).find(x => x.guid === e.target.dataset.use);
+    if (a && a.connected_ssid && !confirm(`${a.name} is this PC's connection to "${a.connected_ssid}". Hosting the hotspot on it can drop the PC off that network. Use it anyway?`)) return;
+    patch({ network: { adapter_guid: e.target.dataset.use } }).then(() => netAct('rescan'));
+  }
+  if (e.target.dataset.enable) { toast('Approve the Windows admin prompt to enable the adapter'); netAct('enable_adapter', { pnp_id: e.target.dataset.enable }); }
+});
+function renderNet() {
+  if (WIFI) {
+    const hs = WIFI.hotspot || {}; const cls = hs.state === 'on' ? 'ok' : hs.state === 'error' ? 'bad' : 'warn';
+    $('#pHotspot').className = 'pill ' + cls;
+    $('#pHotspot').textContent = hs.state === 'on' ? `Hotspot ${hs.ssid}` : WIFI.busy ? WIFI.busy : `Hotspot ${hs.state || '…'}`;
+    const ch = WIFI.chosen;
+    $('#hsState').innerHTML = `<span class="pill ${cls}">${hs.state || '…'}</span> <span>${hs.state === 'on' ? 'SSID <b>' + esc(hs.ssid) + '</b>' : ''}</span>
+      <span class="muted">${ch ? 'on ' + esc(ch.name) + ' — ' + esc(ch.description) : 'no adapter'}</span>
+      ${hs.message ? `<div class="hint" style="width:100%">${esc(hs.message)}</div>` : ''}${WIFI.scan_error ? `<div class="hint" style="color:var(--bad)">${esc(WIFI.scan_error)}</div>` : ''}
+      ${ch && ch.mobile_hotspot_ok === false ? `<div class="card" style="width:100%;border-color:var(--warn)"><h4>${esc(ch.name)} can't host a hotspot on this PC</h4>
+        <p>Its driver is a legacy (non-WDI) one. Windows 11 Mobile Hotspot needs WDI, and the old hosted-network mode has no virtual adapter for it, so Windows would silently use your built-in Wi-Fi instead. Ways forward:<br>
+        • plug in Ethernet, then “Use this adapter” on the built-in Wi-Fi (band auto),<br>
+        • use a USB adapter whose driver shows a WDI version in <span class="mono">netsh wlan show wirelesscapabilities</span>,<br>
+        • or join the test devices to the same Wi-Fi.</p></div>` : ''}`;
+    $('#adapterList').innerHTML = (WIFI.adapters || []).map(a => {
+      const cur = ch && ch.pnp_id === a.pnp_id;
+      return `<div class="card ${cur ? 'cur' : ''}"><h4>${esc(a.name)} ${cur ? '<span class="pill ok">selected</span>' : ''} ${a.problem === 22 ? '<span class="pill bad">disabled</span>' : !a.present ? '<span class="pill">unplugged</span>' : ''}</h4>
+        <p>${esc(a.description)}<br>${esc(a.note || '')} · score ${a.score}${a.ipv4 && a.ipv4.length ? ' · ' + a.ipv4.join(' ') : ''}</p>
+        ${a.problem === 22 ? `<button class="small primary" data-enable="${esc(a.pnp_id)}">Enable (admin)</button>` : ''}
+        ${a.guid && !cur ? `<button class="small" data-use="${esc(a.guid)}">Use this adapter</button>` : ''}
+        ${cur && CFG.network.adapter_guid ? `<button class="small" data-use="">Back to auto-pick</button>` : ''}</div>`;
+    }).join('') || '<div class="muted">Scanning…</div>';
+    $('#wifiLog').innerHTML = (WIFI.log || []).slice().reverse().map(([t, m]) => `<div>${fmtTime(t)} ${esc(m)}</div>`).join('');
+  }
+  if (NET) {
+    const now = Date.now() / 1000;
+    $('#clientBody').innerHTML = (NET.clients || []).map(c => `<tr><td class="mono">${esc(c.ip)}${c.port ? ':' + Number(c.port) : ''}</td><td class="mono">${esc(c.mac)} ${esc(c.name)}</td><td>${esc(c.sources.join(', '))}</td><td>${Math.max(0, Math.round(now - c.last_seen))}s</td></tr>`).join('')
+      || '<tr><td colspan="4" class="muted">No devices yet. Join a test device to the access point and open its EFB app.</td></tr>';
+    const hi = NET.hotspot_iface;
+    $('#netInfo').innerHTML = `Hotspot interface: ${hi ? hi.ip + '/' + hi.prefix : 'none'} · sending to: ${esc((NET.targets || []).join(', ')) || 'waiting for output'}<br>
+      Datagrams sent ${NET.sent_datagrams} · errors ${NET.send_errors}${NET.last_error ? ' (' + esc(NET.last_error) + ')' : ''}<br>Listeners: ${esc((NET.listeners || []).join(' · '))}`;
+    const n = (NET.clients || []).length; $('#pClients').textContent = `${n} Wi-Fi device${n === 1 ? '' : 's'}`; $('#pClients').className = 'pill ' + (n ? 'ok' : '');
+  }
+}
+
+// ---- packets -----------------------------------------------------------------------------------
+$('#btnLogClear').onclick = () => { logRows = []; renderLog(true); };
+$('#btnStatsReset').onclick = () => act('reset_stats');
+$('#logFilter').oninput = () => renderLog(true);
+$('#logHex').onchange = () => renderLog(true);
+function renderLog(force) {
+  if (!force && ($('#logPause').checked || !$('[data-tab=Packets]').classList.contains('active'))) return;
+  const f = $('#logFilter').value.toLowerCase(); const hex = $('#logHex').checked;
+  const rows = (f ? logRows.filter(r => (r.name + ' ' + r.text + ' ' + r.flags).toLowerCase().includes(f)) : logRows).slice(-400).reverse();
+  $('#logBody').innerHTML = rows.map(r => `<tr><td class="mono">${fmtTime(r.t, true)}</td><td>${esc(r.name)}${r.flags ? '<br><span class="muted">' + esc(r.flags) + '</span>' : ''}</td><td>${r.len}</td>
+    <td class="mono">${esc(hex ? r.hex : r.text)}</td></tr>`).join('');
+}
+$('#recordButton').onclick = () => {
+  if (ST?.recording) act('record_stop').then(r => toast('Saved ' + r.result.path));
+  else act('record_start', {path: $('#recPath').value}).then(r => toast('Recording ' + r.result.path));
+};
+$('#startReplay').onclick = () => edit(async () => {
+  const file = $('#replayFile').files[0];
+  if (!file) { toast('Choose a capture file first', true); return; }
+  if (!$('#replaySpeed').reportValidity()) return;
+  const query = new URLSearchParams({name:file.name, speed:$('#replaySpeed').value, loop:String($('#replayLoop').checked)});
+  const response = await fetch('/api/replay?' + query, {method:'POST', body:file});
+  if (!response.ok) throw new PanelError((await response.text()).slice(0, 320));
+  toast('Replaying ' + file.name);
+});
+$('#stopReplay').onclick = () => act('replay_stop');
+
+// ---- map ---------------------------------------------------------------------------------------
+let trail = [], followOwn = true;
+function setFollow(enabled) {
+  followOwn = enabled;
+  $('#follow').setAttribute('aria-pressed', String(enabled));
+  scopeDraw();
+}
+function onMapClick(e) {
+  const lat = e.latlng.lat, lon = e.latlng.lng, m = $('#clickSel').value;
+  if (!ST || !CFG) return;
+  if (m === 'none') {
+    const [x, y] = proj(lat, lon);
+    let closest = null, distance = 23;
+    for (const t of ST.traffic) {
+      const [tx, ty] = proj(t.lat, t.lon);
+      const d = Math.hypot(tx - x, ty - y);
+      if (d < distance) { closest = t; distance = d; }
+    }
+    if (closest) { showTab('Traffic'); openTarget(closest.id); $('#tEdit').scrollIntoView({block:'nearest'}); }
+  }
+  if (m === 'teleport') act('teleport', { lat, lon }).then(() => { trail = []; });
+  if (m === 'waypoint') act('route_add', { lat, lon }).then(() => toast('Waypoint added'));
+  if (m === 'orbit') patch({ flight: { orbit: { lat, lon } } });
+  if (m === 'traffic') act('add_traffic', { preset: 'at', lat, lon, alt_ft: ST ? Math.round(ST.own.alt_ft / 100) * 100 : 3000 });
+  if (m === 'cell') patch({ weather: { cells: [...(CFG.weather.cells || []), { lat, lon, radius_nm: 8, intensity: 6 }] } });
+  if (m === 'station') patch({ weather: { station_auto: false, station_lat: lat, station_lon: lon } });
+  if (m === 'anchor') setAnchor({ lat, lon });
+}
+const VIP = ['#000000', '#22aa66', '#33cc33', '#eeee33', '#ff9900', '#ff3333', '#cc00cc', '#ffffff'];
+
+// ---- offline radar scope ----------------------------------------------------------------------
+let scope = null;
+const PLANE_PATH = new Path2D('M16 1.5 L18.6 12.5 L30 18 L30 21 L18.6 17.6 L17.8 26 L22 29 L22 31 L16 29.4 L10 31 L10 29 L14.2 26 L13.4 17.6 L2 21 L2 18 L13.4 12.5 Z');
+const CHEV_PATH = new Path2D('M12 2 L20 21 L12 16.5 L4 21 Z');
+function initScope() {
+  if (scope) return;
+  const wrap = $('#map'); wrap.innerHTML = ''; wrap.className = '';
+  const c = document.createElement('canvas'); c.style.cssText = 'width:100%;height:100%;display:block;cursor:crosshair;touch-action:none';
+  wrap.appendChild(c);
+  c.tabIndex = 0;
+  c.setAttribute('aria-label', 'Traffic scope. Drag to pan, scroll to zoom, or use the buttons above.');
+  scope = { c, ctx: c.getContext('2d'), center: null, range: 10, drag: null, moved: false, geom: null };
+  const zoom = f => { scope.range = Math.min(250, Math.max(0.3, scope.range * f)); scopeDraw(); };
+  $('#follow').onclick = () => setFollow(true);
+  $('#zoomIn').onclick = () => zoom(0.7);
+  $('#zoomOut').onclick = () => zoom(1.4);
+  c.addEventListener('wheel', e => { e.preventDefault(); zoom(e.deltaY > 0 ? 1.2 : 0.83); }, { passive: false });
+  c.addEventListener('pointerdown', e => { if (!e.isPrimary) return; scope.drag = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, center: scope.center && scope.center.slice() }; scope.moved = false; c.setPointerCapture(e.pointerId); });
+  c.addEventListener('pointermove', e => {
+    const d = scope.drag; if (!d || d.pointerId !== e.pointerId || !d.center) return;
+    const dx = e.clientX - d.x, dy = e.clientY - d.y;
+    if (Math.abs(dx) + Math.abs(dy) > 4) scope.moved = true;
+    if (!scope.moved) return;
+    followOwn = false; $('#follow').setAttribute('aria-pressed','false');
+    const g = scopeGeom(), nmPerPx = scope.range / g.R;
+    scope.center = [Math.min(89.9, Math.max(-89.9, d.center[0] + dy * nmPerPx / 60)), (d.center[1] - dx * nmPerPx / lonScale(d.center[0]) + 540) % 360 - 180];
+    scopeDraw();
+  });
+  c.addEventListener('pointerup', e => {
+    if (!scope.drag || scope.drag.pointerId !== e.pointerId || !scope.center) return;
+    const wasDrag = scope.moved; scope.drag = null;
+    if (wasDrag) return;
+    const r = c.getBoundingClientRect(); const [lat, lon] = unproj(e.clientX - r.left, e.clientY - r.top);
+    onMapClick({ latlng: { lat, lng: lon } });
+  });
+  c.addEventListener('pointercancel', () => { scope.drag = null; });
+  if (window.ResizeObserver) new ResizeObserver(scopeDraw).observe(wrap);
+  else window.addEventListener('resize', scopeDraw);
+  scopeDraw();
+}
+function scopeGeom() {
+  const c = scope.c, r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  if (c.width !== Math.round(r.width * dpr) || c.height !== Math.round(r.height * dpr)) { c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr); }
+  scope.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { w: r.width, h: r.height, R: Math.max(40, Math.min(r.width, r.height) / 2 * 0.9) };
+}
+function lonScale(lat) { return 60 * Math.max(0.001, Math.cos(lat * Math.PI / 180)); }
+function proj(lat, lon) {
+  const g = scope.geom, [clat, clon] = scope.center;
+  const dy = (lat - clat) * 60, dx = ((lon - clon + 540) % 360 - 180) * lonScale(clat);
+  return [g.w / 2 + dx / scope.range * g.R, g.h / 2 - dy / scope.range * g.R];
+}
+function unproj(x, y) {
+  const g = scope.geom, [clat, clon] = scope.center;
+  const dx = (x - g.w / 2) / g.R * scope.range, dy = (g.h / 2 - y) / g.R * scope.range;
+  return [Math.min(90, Math.max(-90, clat + dy / 60)), ((clon + dx / lonScale(clat) + 540) % 360 + 360) % 360 - 180];
+}
+function scopeDraw() {
+  if (!scope || (!ST && !CFG)) return;
+  if (!scope.center || followOwn) scope.center = ST ? [ST.own.lat, ST.own.lon] : [CFG.flight.orbit.lat, CFG.flight.orbit.lon];
+  const g = scope.geom = scopeGeom(), x = scope.ctx;
+  x.fillStyle = '#0b191e'; x.fillRect(0, 0, g.w, g.h);
+  x.fillStyle = '#20343a';
+  for (let i = g.w / 2 % 24; i < g.w; i += 24) {
+    for (let j = g.h / 2 % 24; j < g.h; j += 24) x.fillRect(i, j, 1, 1);
+  }
+  const nmPx = g.R / scope.range;
+  // range rings
+  const step = [0.25, 0.5, 1, 2, 5, 10, 20, 50, 100].find(s => s * 4 >= scope.range) || 100;
+  x.strokeStyle = '#284149'; x.fillStyle = '#84999e'; x.font = '11px Consolas, monospace'; x.lineWidth = 1;
+  for (let k = 1; k <= 6; k++) { const r = k * step * nmPx; if (r > Math.hypot(g.w, g.h)) break;
+    x.beginPath(); x.arc(g.w / 2, g.h / 2, r, 0, 2 * Math.PI); x.stroke(); x.fillText(`${k * step} nm`, g.w / 2 + 3, g.h / 2 - r - 3); }
+  x.beginPath(); x.moveTo(g.w / 2, 0); x.lineTo(g.w / 2, g.h); x.moveTo(0, g.h / 2); x.lineTo(g.w, g.h / 2); x.stroke();
+  x.fillStyle = '#8ca8ac'; x.fillText('N', g.w / 2 + 5, 22);
+  if (CFG) {
+    for (const c of CFG.weather.cells || []) {
+      const [cx, cy] = proj(c.lat, c.lon); const rr = c.radius_nm * nmPx;
+      if (!(rr > 0)) continue;
+      const grad = x.createRadialGradient(cx, cy, 0, cx, cy, rr);
+      grad.addColorStop(0, VIP[Math.min(7, c.intensity)] + 'cc'); grad.addColorStop(1, '#2a660000');
+      x.fillStyle = grad; x.beginPath(); x.arc(cx, cy, rr, 0, 2 * Math.PI); x.fill();
+    }
+    const f = CFG.flight;
+    x.setLineDash([8, 6]); x.strokeStyle = '#1f8fd6'; x.lineWidth = 2;
+    if (f.mode === 'orbit') { const [ox, oy] = proj(f.orbit.lat, f.orbit.lon); x.beginPath(); x.arc(ox, oy, Math.max(0, f.orbit.radius_nm) * nmPx, 0, 2 * Math.PI); x.stroke(); }
+    if ((f.route || []).length) { x.globalAlpha = f.mode === 'route' ? 1 : .35; x.beginPath();
+      f.route.forEach((w, i) => { const [px, py] = proj(w.lat, w.lon); i ? x.lineTo(px, py) : x.moveTo(px, py); });
+      if (f.route_loop) { const w = f.route[Math.min(f.route_loop_to, f.route.length - 1)]; const [px, py] = proj(w.lat, w.lon); x.lineTo(px, py); }
+      x.stroke(); x.globalAlpha = 1; }
+    x.setLineDash([]);
+    const a = anchor(); if (!isNaN(a.lat)) { const [px, py] = proj(a.lat, a.lon); x.strokeStyle = '#c08cff'; x.beginPath(); x.arc(px, py, 5, 0, 2 * Math.PI); x.stroke(); }
+  }
+  if (!ST) return;
+  if (ST.station) { const [px, py] = proj(ST.station[0], ST.station[1]); x.strokeStyle = '#3ccf8e'; x.lineWidth = 2; x.beginPath(); x.arc(px, py, 6, 0, 2 * Math.PI); x.stroke(); x.fillStyle = '#3ccf8e'; x.fillText('UAT', px + 8, py + 4); }
+  if (trail.length > 1) { x.strokeStyle = '#e0a800aa'; x.lineWidth = 2.5; x.beginPath(); trail.forEach((p, i) => { const [px, py] = proj(p[0], p[1]); i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.stroke(); }
+  for (const t of ST.traffic) {
+    const [px, py] = proj(t.lat, t.lon); if (px < -50 || py < -50 || px > g.w + 50 || py > g.h + 50) continue;
+    const col = t.silent ? '#666' : t.emergency ? '#ff5d5d' : t.addr_type === 4 ? '#aaa' : t.addr_type >= 2 ? '#c08cff' : '#4fd1ff';
+    x.save(); x.translate(px, py); x.rotate(t.track * Math.PI / 180); x.translate(-12, -12); x.fillStyle = col; x.strokeStyle = '#111'; x.fill(CHEV_PATH); x.stroke(CHEV_PATH); x.restore();
+    if (t.alerting) { x.strokeStyle = '#ff5d5d'; x.lineWidth = 2; x.beginPath(); x.arc(px, py, 13, 0, 2 * Math.PI); x.stroke(); }
+    const ra = Math.round(t.rel_alt / 100);
+    x.fillStyle = '#fff'; x.fillText(`${t.callsign || t.address} ${ra >= 0 ? '+' : '−'}${String(Math.abs(ra)).padStart(2, '0')}${t.vs_fpm > 300 ? '↑' : t.vs_fpm < -300 ? '↓' : ''}`, px + 14, py + 4);
+  }
+  const drawPlane = (k, col) => { const [px, py] = proj(k.lat, k.lon); x.save(); x.translate(px, py); x.rotate(k.heading * Math.PI / 180); x.translate(-16, -16); x.fillStyle = col; x.strokeStyle = '#111'; x.lineWidth = 1.1; x.fill(PLANE_PATH); x.stroke(PLANE_PATH); x.restore(); };
+  if (ST.frozen) drawPlane(ST.reported, 'rgba(255,93,93,.75)');
+  drawPlane(ST.own, '#ffd23f');
+}
+
+function drawLive() {
+  const last = trail[trail.length - 1];
+  if (!last || last[0] !== ST.own.lat || last[1] !== ST.own.lon) {
+    trail.push([ST.own.lat, ST.own.lon]);
+    if (trail.length > 600) trail.shift();
+  }
+  scopeDraw();
+}
+
+// ---- telemetry -----------------------------------------------------------------------------------
+function fmtTime(t, ms) { const d = new Date(t * 1000); const s = d.toISOString().slice(11, ms ? 23 : 19); return s; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
+function onState(s) {
+  if (s.traffic_columns) {
+    s.traffic = s.traffic.map(row => Object.fromEntries(s.traffic_columns.map((key, i) => [key, row[i]])));
+  }
+  ST = s;
+  if (s.net) NET = s.net; if (s.wifi) WIFI = s.wifi;
+  if (s.ap) renderAp(s.ap);
+  if (s.log && s.log.length) { logRows.push(...s.log); if (logRows.length > 2000) logRows.splice(0, logRows.length - 2000); }
+  const o = s.own;
+  const metric = (label, value, unit) => `<div><small>${label}</small><strong>${value}</strong> <span>${unit}</span></div>`;
+  $('#hud').innerHTML = `<div class="hud-head"><b>${esc(CFG?.ownship.callsign)}</b>
+    <span>${o.on_ground ? 'On ground' : 'Airborne'} · ${!s.running ? 'Stopped' : s.paused ? 'Paused' : 'Running'}${s.gps_ok ? '' : ' · GPS invalid'}</span>
+    <time>${fmtTime(s.utc)} UTC</time></div>
+    <div class="metrics">${metric('Altitude MSL', Math.round(o.alt_ft).toLocaleString(), 'ft')}${metric('Groundspeed', Math.round(o.gs_kt), 'kt')}${metric('Track', Math.round(o.track) % 360, '°T')}${metric('Vertical speed', Math.round(o.vs_fpm), 'fpm')}</div>
+    <div class="hud-more">${o.lat.toFixed(4)}, ${o.lon.toFixed(4)} · HDG ${Math.round(o.heading)}° · TAS ${Math.round(o.tas_kt)} kt · Roll ${Math.round(o.roll)}° · Pitch ${o.pitch.toFixed(1)}°</div>`;
+  $('#btnRun').textContent = s.running ? 'Stop output' : 'Start output';
+  $('#btnPause').textContent = s.paused ? 'Resume flight' : 'Pause flight';
+  $('#btnPause').disabled = !s.running;
+  $('#recordButton').textContent = s.recording ? 'Stop recording' : 'Record';
+  $('#stopReplay').disabled = !s.replay;
+  $('#pRate').textContent = `${Math.round(s.stats.msgs_per_s)} msg/s`;
+  $('#pScenario').textContent = s.scenario ? `${s.scenario.name} · ${fmtDur(Math.round(s.scenario.elapsed_s))}` : 'Manual flight';
+  $('#navInfo').textContent = s.nav.wp_name ? `Flying to ${s.nav.wp_name}${s.nav.finished ? ' (route finished)' : ''}` : '';
+  $('#upInfo').textContent = `${s.uplink_payloads} uplink payload(s) in rotation${s.station ? ` · station ${s.station[0].toFixed(3)}, ${s.station[1].toFixed(3)}` : ''}`;
+  const st = s.stats;
+  $('#statsLine').textContent = `${st.msgs} messages · ${(st.bytes / 1024).toFixed(0)} KB`;
+  drawLive();
+  renderLog(false);
+  const now = performance.now();
+  if (now - lastTables > 900) {
+    lastTables = now;
+    $$('#streamBody [data-sc]').forEach(td => { td.textContent = st.per_type[td.dataset.sc] || ''; });
+    $('#trafficBody').innerHTML = s.traffic.map(t => `<tr data-id="${t.id}" class="${t.id === selTarget ? 'sel' : ''}"><td>${esc(t.callsign) || '<span class="muted">—</span>'}${t.emergency ? ' 🚨' : ''}${t.silent ? ' <span class="muted">(silent)</span>' : ''}</td>
+      <td class="mono">${t.address}/${t.addr_type}</td><td style="color:${t.alerting ? 'var(--bad)' : ''}">${t.rel_alt >= 0 ? '+' : ''}${Math.round(t.rel_alt)}</td>
+      <td>${t.range_nm.toFixed(1)} / ${Math.round(t.bearing)}°</td><td>${Math.round(t.gs_kt)}</td><td><button class="small" aria-label="Remove aircraft ${esc(t.callsign || t.address)}" data-tdel="${t.id}">✕</button></td></tr>`).join('')
+      || '<tr><td colspan="6" class="muted">No traffic.</td></tr>';
+    $('#scenRun').style.display = s.scenario ? '' : 'none';
+    if (s.scenario) {
+      const el = s.scenario.elapsed_s;
+      $('#scenInfo').innerHTML = `<b>${esc(s.scenario.name)}</b> · T+${Math.round(el)} s` + (s.scenario.events.length ? '<br>' + s.scenario.events.map(e => `<span class="${e.at_s <= el ? 'ev-done' : (s.scenario.next_event && s.scenario.next_event.at_s === e.at_s ? 'ev-next' : '')}">T+${e.at_s}s ${esc(e.label)}</span>`).join('<br>') : '');
+    }
+    if (s.notices && s.notices.length) { const n = s.notices[0]; if (n.t > (window.lastNotice || 0) && now / 1000 > 3 && Math.abs(Date.now()/1000 - n.t) < 8) { window.lastNotice = n.t; toast(n.msg); } }
+    renderNet();
+    if (CFG && CFG.flight.mode === 'route') {
+      $$('#routeBody tr').forEach((row, i) => row.classList.toggle('sel', s.nav.wp_index === i));
+    }
+  }
+}
+const usb = !!window.gdl90Usb || ['localhost','127.0.0.1','[::1]'].includes(location.hostname);
+let connected = false, lastSeq = 0, lastUptime = null;
+function link(status, label) {
+  const el = $('#linkState');
+  if (el.textContent !== label) el.textContent = label;
+  el.className = status;
+  connected = status === 'connected';
+  $('aside').inert = !connected;
+  $('#btnRun').disabled = $('#profileSel').disabled = !connected;
+  $('#btnPause').disabled = !connected || !ST?.running;
+}
+function connectionName() {
+  if (CAT?.platform !== 'esp32') return 'Desktop connected';
+  return usb ? 'USB connected' : 'Wi-Fi connected';
+}
+function connect() {
+  if (CAT.platform === 'esp32') { poll(); return; }
+  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
+  ws.onmessage = e => {
+    onState(JSON.parse(e.data));
+    link('connected', connectionName());
+  };
+  ws.onclose = () => { link('lost', 'Disconnected · retrying'); setTimeout(connect, 1500); };
+}
+let lastClockSet = 0;
+async function poll() {
+  let delay = document.hidden ? 2000 : 550;
+  try {
+    const s = await api('/api/state?since=' + lastSeq);
+    const restarted = lastUptime !== null && s.ap?.uptime_s < lastUptime;
+    if (restarted) { trail = []; logRows = []; lastSeq = lastClockSet = 0; }
+    lastUptime = s.ap?.uptime_s ?? null;
+    if (s.log?.length) lastSeq = s.log[s.log.length - 1].seq;
+    if (!s.ap?.time_synced || Date.now() - lastClockSet > 600000) {
+      await api('/api/action', {type: 'set_time', unix: Date.now() / 1000});
+      lastClockSet = Date.now();
+    }
+    // Other browser controllers may change settings. Avoid disrupting an in-progress edit.
+    if (restarted || !connected || (!document.activeElement.matches('input,textarea,select') && Date.now() - lastConfigRead > 30000)) {
+      await writes;
+      CFG = await api('/api/config');
+      renderConfig();
+    }
+    onState(s);
+    link('connected', connectionName());
+  } catch (e) {
+    link('lost', usb ? 'USB disconnected · retrying' : 'Wi-Fi disconnected · retrying');
+    delay = 2000;
+    console.warn('Telemetry unavailable', e.message);
+  }
+  setTimeout(poll, delay);
+}
+function fmtDur(s) { const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60; return h ? `${h}h${String(m).padStart(2, '0')}m` : `${m}m${String(s % 60).padStart(2, '0')}s`; }
+function renderAp(ap) {
+  $('#pHotspot').className = 'pill ok';
+  $('#pHotspot').textContent = `Wi-Fi · ${ap.ssid}`;
+  $('#apInfo').innerHTML = `Running as <b>${esc(ap.ssid)}</b> (${ap.open ? 'open, no password' : 'WPA2'}) on channel ${ap.channel} · control panel at <b>http://192.168.4.1</b>
+    · pop-up ${ap.captive_portal ? 'on' : 'off'}<br>Up ${fmtDur(ap.uptime_s)} · free memory ${(ap.free_heap / 1024).toFixed(0)} KB (lowest ${(ap.min_free_heap / 1024).toFixed(0)} KB)
+    · clock ${ap.time_synced ? 'set from a browser ✓' : '<span style="color:var(--warn)">not set yet</span>'} · saved setup: ${ap.saved_settings ? 'yes' : 'no (factory defaults)'}`;
+}
+function applyPlatform() {
+  const f = (CAT && CAT.features) || {};
+  $$('[data-feature]').forEach(el => { el.style.display = f[el.dataset.feature] === false ? 'none' : ''; });
+  $$('[data-platform]').forEach(el => { el.style.display = el.dataset.platform === CAT.platform ? (el.tagName === 'LABEL' ? 'inline-flex' : 'block') : 'none'; });
+  if (CAT && CAT.platform === 'esp32') {
+    document.title = 'GDL 90 Emulator (ESP32)';
+    $('#btnApplyWifi').onclick = () => {
+      const inputs = $$('[data-platform=esp32] [data-path^="network."]');
+      if (inputs.every(input => input.reportValidity())) netAct('apply_wifi');
+    };
+    $('#btnSaveDefault').onclick = () => act('save_default').then(() => toast('Saved to the ESP32'));
+    $('#btnClearDefault').onclick = () => act('clear_default').then(() => toast('Factory settings will load on the next boot'));
+    $('#btnResetCfg2').onclick = () => { if (confirm('Reset flight and receiver settings? Wi-Fi and output settings are preserved.')) act('reset_config'); };
+    $('#btnReboot').onclick = () => { if (confirm('Reboot the ESP32? Devices drop off for ~5 s.')) act('reboot').then(() => toast('Rebooting…')); };
+  }
+}
+
+initScope();
+async function boot() {
+  try {
+    CAT = await api('/api/catalog');
+    applyPlatform();
+    $('#profileSel').innerHTML = CAT.profiles.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    $('#profileCards').innerHTML = CAT.profiles.map(p => `<div class="card" data-id="${p.id}"><h4>${esc(p.name)}</h4><p>${esc(p.description)}</p><button class="small" data-prof="${p.id}">Use</button></div>`).join('');
+    $('#scenList').innerHTML = CAT.scenarios.map(s => `<div class="card"><h4>${esc(s.name)}</h4><p>${esc(s.description)}</p><button class="small primary" data-scen="${s.id}">Load</button></div>`).join('');
+    setAnchor(CAT.anchor);
+    CFG = await api('/api/config');
+    renderConfig();
+    connect();
+  } catch (e) {
+    link('lost', 'Waiting for emulator · retrying');
+    console.warn('Could not load emulator settings', e.message);
+    setTimeout(boot, 2000);
+  }
+}
+boot();
+</script>
+</body>
+</html>
